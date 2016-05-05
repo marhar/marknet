@@ -1,0 +1,77 @@
+#!/bin/sh
+# build marknet infrastructure
+#  - build python
+#  - get pip
+#  - install virtualenv
+
+WORKDIR=$HOME/work-marknet
+ENVNAME=rc
+PYTGZ=Python-2.7.11.tgz
+
+echo Building in $WORKDIR
+
+if test ! -h $WORKDIR/bin/python; then
+    echo building python...
+    test -d $WORKDIR/src || mkdir $WORKDIR/src
+    (cd $WORKDIR/src && tar xzf $WORKDIR/dist/$PYTGZ)
+
+    PYSRC=`echo $WORKDIR/src/Python*`
+    echo $PYSRC
+
+    (cd $PYSRC && ./configure --prefix=$WORKDIR)
+    (cd $PYSRC && make -j12 install) 
+else
+    echo python exists
+fi
+
+if test ! -f $WORKDIR/bin/pip; then
+    echo getting pip
+    rm -f $WORKDIR/get-pip.py
+    curl -s -o $WORKDIR/get-pip.py https://bootstrap.pypa.io/get-pip.py
+    $WORKDIR/bin/python $WORKDIR/get-pip.py
+    rm $WORKDIR/get-pip.py
+else
+    echo pip exists
+fi
+
+if test ! -f $WORKDIR/bin/virtualenv; then
+    echo getting virtualenv
+    $WORKDIR/bin/pip install virtualenv
+else
+    echo virtualenv exists
+fi
+
+#  - install instantclient
+
+if test `uname` = Darwin; then
+    INSTZIP=instantclient-basic-macos.x32-11.2.0.4.0.zip
+    TESTFILE=$WORKDIR/instantclient_11_2/libclntsh.dylib.11.1 
+else
+    INSTZIP=instantclient-basic-linux.x64-12.1.0.2.0.zip
+    TESTFILE=$WORKDIR/instantclient_12_1/libclntsh.so.12.1
+fi
+
+
+if test ! -f $TESTFILE; then
+    echo unzipping instantclient...
+    (cd $WORKDIR && unzip -nq $WORKDIR/dist/$INSTZIP)
+else
+    echo instantclient exists
+fi
+
+### LD_LIBRARY_PATH=./instantclient_12_1 ./myvirtual/bin/python
+
+echo setting up virtualenv $ENVNAME
+
+$WORKDIR/bin/virtualenv $WORKDIR/$ENVNAME
+
+$WORKDIR/$ENVNAME/bin/pip -q install hjson
+$WORKDIR/$ENVNAME/bin/pip -q install flask
+$WORKDIR/$ENVNAME/bin/pip -q install setuptools  ## required by cx_Oracle
+$WORKDIR/$ENVNAME/bin/pip -q install boto
+$WORKDIR/$ENVNAME/bin/pip -q install requests
+$WORKDIR/$ENVNAME/bin/pip -q install readline
+$WORKDIR/$ENVNAME/bin/pip install cx_Oracle
+$WORKDIR/$ENVNAME/bin/pip install cx_Oracle
+
+virtualenv --relocatable $WORKDIR/$ENVNAME
